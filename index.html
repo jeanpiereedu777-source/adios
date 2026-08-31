@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Un capítulo breve</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Special+Elite&display=swap');
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  :root{
+    --paper: #F3E9D8;
+    --paper-dark: #E6D6B8;
+    --ink: #362B25;
+    --ink-soft: #8A7A68;
+    --accent: #A8503B;
+    --accent-light: #C97C5D;
+    --tape: rgba(255,252,244,0.65);
+    --line: rgba(54,43,37,0.12);
+  }
+
+  html, body{ height:100%; }
+
+  body{
+    background: var(--paper-dark);
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(255,255,255,0.35) 0%, transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(0,0,0,0.05) 0%, transparent 45%);
+    color: var(--ink);
+    font-family: 'Special Elite', monospace;
+    min-height: 100vh;
+    overflow: hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:0.01ms !important; transition-duration:0.01ms !important; }
+  }
+
+  /* subtle paper grain */
+  body::before{
+    content:'';
+    position: fixed; inset:0;
+    pointer-events:none;
+    opacity: 0.05;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+
+  /* ---------- TOP CONTROLS ---------- */
+  .top-controls{
+    position: fixed; top: 16px; right: 16px;
+    display:flex; gap:10px; z-index: 1400;
+  }
+
+  .pin-btn{
+    font-family: 'Caveat', cursive;
+    font-size: 17px;
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 5px 12px;
+    cursor: pointer;
+    box-shadow: 1px 2px 4px rgba(0,0,0,0.15);
+    transform: rotate(-1.5deg);
+    transition: transform 0.15s ease;
+  }
+  .pin-btn:hover{ transform: rotate(0deg) scale(1.03); }
+
+  /* Music mini-panel */
+  .music-wrap{ position: relative; }
+  .music-panel{
+    position:absolute; top: 42px; right: 0;
+    background: var(--paper);
+    border:1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    box-shadow: 2px 3px 10px rgba(0,0,0,0.18);
+    width: 190px;
+    display:none;
+    transform: rotate(-0.5deg);
+  }
+  .music-panel.open{ display:block; }
+
+  .music-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+
+  .play-btn{
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 1px solid var(--accent);
+    background: transparent; color: var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size: 11px; flex-shrink:0;
+  }
+  .play-btn:disabled{ opacity:0.35; cursor:default; }
+
+  .bars{ display:flex; align-items:flex-end; gap:2px; height:14px; width:16px; }
+  .bars span{ width:3px; background:var(--accent); height:4px; border-radius:1px; opacity:0.5; }
+  .bars.playing span{ animation: bar 0.9s ease-in-out infinite; }
+  .bars.playing span:nth-child(2){ animation-delay:0.2s; }
+  .bars.playing span:nth-child(3){ animation-delay:0.4s; }
+  @keyframes bar{ 0%,100%{height:4px;opacity:0.5;} 50%{height:14px;opacity:1;} }
+
+  .track-label{ font-size: 11px; color: var(--ink-soft); max-width: 90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .upload-label{
+    display:block; font-family:'Caveat', cursive; font-size:15px;
+    color: var(--accent); cursor:pointer; text-align:center;
+    border-top: 1px dashed var(--line); padding-top: 8px;
+  }
+
+  .mute-btn{ min-width: 38px; text-align:center; }
+
+  /* ---------- COVER ---------- */
+  #cover{
+    position: fixed; inset:0; z-index: 1300;
+    background: linear-gradient(160deg, #4A3428, #2E2119);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    cursor: pointer;
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+  #cover.hidden{ opacity:0; transform: scale(1.04); pointer-events:none; }
+
+  .cover-card{
+    background: var(--paper);
+    padding: 3rem 2.6rem;
+    border-radius: 3px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    text-align:center;
+    transform: rotate(-1deg);
+    max-width: 320px;
+  }
+
+  .cover-card h1{
+    font-family:'Caveat', cursive;
+    font-weight:600;
+    font-size: 2.6rem;
+    color: var(--ink);
+    margin-bottom: 0.6rem;
+  }
+
+  .cover-card p{
+    font-size: 0.85rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.5px;
+  }
+
+  .cover-tap{
+    margin-top: 1.6rem;
+    font-family:'Caveat', cursive;
+    font-size: 1.2rem;
+    color: var(--accent);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulse{ 0%,100%{opacity:0.6;} 50%{opacity:1;} }
+
+  /* ---------- PAGE STAGE ---------- */
+  .stage{
+    perspective: 1600px;
+    width: min(480px, 92vw);
+    height: min(640px, 88vh);
+    transition: opacity 0.9s ease, transform 0.9s ease;
+  }
+
+  /* ---------- FAREWELL SCREEN ---------- */
+  #farewell{
+    position: fixed; inset: 0;
+    background: linear-gradient(160deg, #4A3428, #2E2119);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 1500;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1.2s ease;
+  }
+  #farewell.show{ opacity: 1; pointer-events:auto; }
+
+  #farewell .glow{
+    position:absolute;
+    width: 60vw; height: 60vw; max-width: 700px; max-height: 700px;
+    background: radial-gradient(circle, rgba(201,124,93,0.18), transparent 70%);
+    filter: blur(10px);
+  }
+
+  #farewell h1{
+    position: relative;
+    font-family: 'Caveat', cursive;
+    font-weight: 700;
+    color: #F3E9D8;
+    font-size: clamp(3rem, 11vw, 6.5rem);
+    text-align: center;
+    line-height: 1.15;
+    padding: 0 1rem;
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+    transition: opacity 1.4s ease 0.3s, transform 1.4s ease 0.3s;
+  }
+  #farewell.show h1{ opacity: 1; transform: translateY(0) scale(1); }
+
+  #farewell .sub{
+    position: absolute;
+    bottom: 12%;
+    font-family: 'Caveat', cursive;
+    font-size: 1.15rem;
+    color: rgba(243,233,216,0.55);
+    letter-spacing: 0.5px;
+    opacity: 0;
+    transition: opacity 1.2s ease 1.6s;
+  }
+  #farewell.show .sub{ opacity: 1; }
+
+  .page{
+    width:100%; height:100%;
+    background: var(--paper);
+    border-radius: 4px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.25);
+    position: relative;
+    padding: 2.2rem 2rem 1.6rem;
+    display:flex; flex-direction:column;
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease, opacity 0.5s ease;
+  }
+
+  .page.turning-out{ transform: rotateY(-18deg) translateX(-10px); opacity: 0; }
+  .page.turning-in{ transform: rotateY(18deg) translateX(10px); opacity: 0; }
+
+  .page-index{
+    font-family:'Caveat', cursive;
+    color: var(--ink-soft);
+    font-size: 1rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .page-title{
+    font-family:'Caveat', cursive;
+    font-weight: 600;
+    font-size: 2.1rem;
+    color: var(--accent);
+    margin-bottom: 1.1rem;
+    line-height: 1.1;
+  }
+
+  .page-body{
+    flex: 1;
+    font-size: 0.98rem;
+    line-height: 2.05;
+    white-space: pre-wrap;
+    background-image: repeating-linear-gradient(
+      to bottom, transparent, transparent 38px, var(--line) 39px
+    );
+    padding-bottom: 4px;
+  }
+
+  .caret{
+    display:inline-block; width:8px; height:15px;
+    background: var(--ink); margin-left:1px;
+    vertical-align: text-bottom;
+    animation: blink 0.9s step-end infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+  /* photo slot */
+  .photo-slot{
+    align-self: center;
+    margin: 0.6rem 0 1rem;
+    width: 128px; height: 128px;
+    border: 2px dashed rgba(54,43,37,0.28);
+    border-radius: 4px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    position:relative;
+    transform: rotate(-2deg);
+    background: rgba(255,255,255,0.25);
+    transition: border-color 0.2s ease;
+    flex-shrink:0;
+  }
+  .photo-fixed{
+  align-self: center;
+  margin: 0.6rem 0 1rem;
+  width: 128px; height: 128px;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  transform: rotate(-2deg);
+  box-shadow: 1px 2px 6px rgba(0,0,0,0.2);
+}
+
+.photo-fixed img{
+  width: 100%; height: 100%; object-fit: cover;
+}
+
+.photo-fixed .tape{
+  position:absolute; top:-10px; left:50%; transform: translateX(-50%) rotate(-3deg);
+  width: 54px; height: 18px; background: var(--tape);
+  border: 1px solid rgba(0,0,0,0.05);
+  z-index: 2;
+}
+  .photo-slot:hover{ border-color: var(--accent); }
+
+  .photo-slot .plus-label{
+    font-family:'Caveat', cursive;
+    font-size: 1rem;
+    color: var(--ink-soft);
+    text-align:center;
+    padding: 0 8px;
+  }
+
+  .photo-slot img{
+    width:100%; height:100%; object-fit:cover; border-radius:2px;
+  }
+
+  .photo-slot .tape{
+    position:absolute; top:-10px; left:50%; transform: translateX(-50%) rotate(-3deg);
+    width: 54px; height: 18px; background: var(--tape);
+    border: 1px solid rgba(0,0,0,0.05);
+  }
+
+  .photo-slot .remove-x{
+    position:absolute; top:-8px; right:-8px;
+    width: 22px; height:22px; border-radius:50%;
+    background: var(--accent); color:#fff;
+    font-size: 13px; line-height:22px; text-align:center;
+    cursor:pointer; display:none;
+  }
+  .photo-slot.has-img .remove-x{ display:block; }
+
+  /* nav */
+  .nav-row{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-top: 0.8rem;
+  }
+
+  .nav-btn{
+    font-family:'Caveat', cursive;
+    font-size: 1.3rem;
+    background:none; border:none; color: var(--ink);
+    cursor:pointer;
+    padding: 4px 10px;
+  }
+  .nav-btn:disabled{ opacity: 0.25; cursor:default; }
+  .nav-btn:hover:not(:disabled){ color: var(--accent); }
+
+  .dots{ display:flex; gap:6px; }
+  .dot{
+    width:7px; height:7px; border-radius:50%;
+    background: var(--line);
+  }
+  .dot.active{ background: var(--accent); }
+
+  /* seal on final page */
+  .seal{
+    width: 92px; height: 92px; border-radius:50%;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Caveat', cursive; font-size: 1rem;
+    margin: 0.4rem auto 0.6rem;
+    transform: rotate(-6deg);
+    text-align:center; line-height:1.2;
+    opacity: 0;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .seal.show{ opacity:0.85; transform: rotate(-6deg) scale(1); }
+
+  @media (max-width: 420px){
+    .page{ padding: 1.7rem 1.3rem 1.2rem; }
+    .page-title{ font-size: 1.8rem; }
+    .cover-card{ padding: 2.2rem 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="top-controls">
+    <button class="pin-btn mute-btn" id="muteBtn" title="Silenciar sonido de tipeo">🔊</button>
+    <div class="music-wrap">
+      <button class="pin-btn" id="musicToggle">🎵 música</button>
+      <div class="music-panel" id="musicPanel">
+        <div class="music-row">
+          <button class="play-btn" id="playBtn">▶</button>
+<div class="bars" id="bars"><span></span><span></span><span></span></div>
+<span class="track-label" id="trackLabel">SIentumenteestuve</span>
+        </div>
+        
+        
+        <audio id="audio" loop src="audio/SIentumenteestuve.mp3"></audio>
+      </div>
+    </div>
+  </div>
+
+  <div id="cover">
+    <div class="cover-card">
+      <h1>Te recordaré</h1>
+      <p>Estas son algunas paginas para hacerte saber lo que siento</p>
+      <div class="cover-tap">toca para abrir</div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="page" id="page">
+      <!-- content injected by JS -->
+    </div>
+  </div>
+
+  <div id="farewell">
+    <div class="glow"></div>
+    <h1>Hasta siempre,<br>Alisson</h1>
+    <div class="sub">Siempre te llevare en mi corazón</div>
+  </div>
+
+<script>
+  const chapters = [
+    {
+      title: "Aunque fue cortito",
+      text: "Se que no duró mucho el tiempo que estuvimos.\nFueron pocos días, pocas semanas.\n\nPero en ese tiempo corto,\nme sentí feliz de verdad.\n\nNo necesito que haya durado más\npara que eso siga siendo hermoso.",
+      photoHint: "pega aqui",
+      photo: "fotos/1.jpg"
+    },
+    {
+      title: "Algo que no te dije",
+      text: "No pude decirte que estoy diagnosticado de depresión moderada\nY estoy siendo medicado.\n\nY a pesar de lo que me isiste no te voy a hechar la culpa,\n\nSolo quiero darte las gracias porque me hiciste sentir mas vivo y feliz que nunca. ",
+      photoHint: "un recuerdo de ese momento",
+      photo: "fotos/2.jpg"
+    },
+    {
+      title: "No te guardaré rencor",
+      text: "No te odio y nunca lo hare.\n\nPodría quedarme con la parte que dolió,\npero prefiero quedarme con la parte en la que me permitiste quererte.\n\nEspero que puedas cumplir todas tus metas y sueños,\nY que puedas ser muy feliz en la vida.\n\nGracias por todo.",
+      photoHint: "algo que represente soltar",
+      photo: "fotos/3.jpg"
+    },
+    {
+      title: "Adios",
+      text: "Esto no es un reclamo.\nEs solo una despedida desde mi alma.\n\nGracias por esos días,\nfueron hermosos, quizas en otro universo si hubiera funcionado.\n\n#NO OLVIDES DESAYUNAR TODOS LOS DIAS.",
+      photoHint: "una imagen para cerrar esta página",
+      photo: "fotos/4.jpg",
+      isFinal: true
+    }
+  ];
+
+  let current = 0;
+  let isTyping = false;
+  const page = document.getElementById('page');
+  const cover = document.getElementById('cover');
+
+  /* ---------- SOUND ---------- */
+  let audioCtx = null;
+  let soundOn = true;
+
+  function ensureAudioCtx(){
+    if (!audioCtx){
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  function playKeySound(){
+    if (!soundOn || !audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filt = audioCtx.createBiquadFilter();
+
+    filt.type = 'bandpass';
+    filt.frequency.value = 1000 + Math.random() * 800;
+    filt.Q.value = 4;
+
+    osc.type = 'square';
+    osc.frequency.value = 120 + Math.random() * 60;
+
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.linearRampToValueAtTime(0.045, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+
+    osc.connect(filt);
+    filt.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.04);
+  }
+
+  document.getElementById('muteBtn').addEventListener('click', (e) => {
+    soundOn = !soundOn;
+    e.currentTarget.textContent = soundOn ? '🔊' : '🔇';
+  });
+
+  /* ---------- TYPEWRITER ---------- */
+  function wait(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+  async function typeText(container, text){
+    isTyping = true;
+    const caret = document.createElement('span');
+    caret.className = 'caret';
+    container.appendChild(caret);
+
+    for (let i = 0; i < text.length; i++){
+      const ch = text[i];
+      container.insertBefore(document.createTextNode(ch), caret);
+      if (ch !== ' ' && ch !== '\n') playKeySound();
+      await wait(28 + Math.random() * 18);
+    }
+    caret.remove();
+    isTyping = false;
+  }
+
+  /* ---------- PHOTO STORAGE ---------- */
+  function loadPhoto(idx){
+    try { return localStorage.getItem('cierre_photo_' + idx); }
+    catch(e){ return null; }
+  }
+  function savePhoto(idx, dataUrl){
+    try { localStorage.setItem('cierre_photo_' + idx, dataUrl); }
+    catch(e){ /* storage full or unavailable, ignore */ }
+  }
+  function clearPhoto(idx){
+    try { localStorage.removeItem('cierre_photo_' + idx); }
+    catch(e){}
+  }
+
+  /* ---------- RENDER PAGE ---------- */
+  function renderPage(idx, directionClass){
+    const ch = chapters[idx];
+
+    page.innerHTML = `
+      <div class="page-index">página ${idx + 1} de ${chapters.length}</div>
+      <div class="page-title">${ch.title}</div>
+      <div class="photo-fixed">
+  <div class="tape"></div>
+  <img src="${ch.photo}" alt="">
+</div>
+      <div class="page-body" id="pageBody"></div>
+      ${ch.isFinal ? '<div class="seal" id="seal">Mi<br>lirio azul <3</div>' : ''}
+      <div class="nav-row">
+        <button class="nav-btn" id="prevBtn" ${idx === 0 ? 'disabled' : ''}>‹ atrás</button>
+        <div class="dots">
+          ${chapters.map((_, i) => `<div class="dot ${i === idx ? 'active' : ''}"></div>`).join('')}
+        </div>
+        <button class="nav-btn" id="nextBtn">${idx === chapters.length - 1 ? 'fin ›' : 'sigue ›'}</button>
+      </div>
+    `;
+
+    
+
+    document.getElementById('prevBtn').addEventListener('click', () => goTo(idx - 1));
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      if (idx === chapters.length - 1){
+        closeBook();
+      } else {
+        goTo(idx + 1);
+      }
+    });
+
+    // type the body text
+    const body = document.getElementById('pageBody');
+    typeText(body, ch.text).then(() => {
+      if (ch.isFinal){
+        document.getElementById('seal').classList.add('show');
+      }
+    });
+  }
+
+  function applyPhoto(slot, src){
+    slot.classList.add('has-img');
+    slot.querySelectorAll('.plus-label, .tape').forEach(el => el.remove());
+    const img = document.createElement('img');
+    img.src = src;
+    slot.insertBefore(img, slot.firstChild);
+  }
+
+  async function goTo(newIdx){
+    if (isTyping) return;
+    page.classList.add(newIdx > current ? 'turning-out' : 'turning-out');
+    await wait(260);
+    current = newIdx;
+    renderPage(current);
+    page.classList.remove('turning-out');
+    page.classList.add(newIdx >= current ? 'turning-in' : 'turning-in');
+    requestAnimationFrame(() => {
+      page.classList.remove('turning-in');
+    });
+  }
+
+  function closeBook(){
+    const stage = document.querySelector('.stage');
+    stage.style.opacity = '0';
+    stage.style.transform = 'scale(0.96)';
+    setTimeout(() => {
+      document.getElementById('farewell').classList.add('show');
+    }, 500);
+  }
+
+  /* ---------- COVER ---------- */
+  cover.addEventListener('click', () => {
+    ensureAudioCtx();
+    cover.classList.add('hidden');
+    renderPage(0);
+  }, { once: true });
+
+  /* ---------- MUSIC PLAYER ---------- */
+  const musicToggle = document.getElementById('musicToggle');
+  const musicPanel = document.getElementById('musicPanel');
+  const audio = document.getElementById('audio');
+  const playBtn = document.getElementById('playBtn');
+  const bars = document.getElementById('bars');
+  const trackLabel = document.getElementById('trackLabel');
+  const audioFile = document.getElementById('audioFile');
+
+  musicToggle.addEventListener('click', () => musicPanel.classList.toggle('open'));
+
+  
+
+  playBtn.addEventListener('click', () => {
+    if (audio.paused){
+      audio.play();
+      playBtn.textContent = '❚❚';
+      bars.classList.add('playing');
+    } else {
+      audio.pause();
+      playBtn.textContent = '▶';
+      bars.classList.remove('playing');
+    }
+  });
+
+  audio.addEventListener('ended', () => {
+    playBtn.textContent = '▶';
+    bars.classList.remove('playing');
+  });
+</script>
+</body>
+</html>
